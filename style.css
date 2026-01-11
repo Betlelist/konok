@@ -1,0 +1,81 @@
+:root { --primary: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --text-sec: #8E8E93; --success: #34C759; --danger: #FF3B30; --warning: #FF9500; }
+body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; color: var(--text); padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
+.app-container { max-width: 500px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
+.center-content { display: flex; align-items: center; justify-content: center; height: 100vh; }
+
+/* HEADER & TITLES */
+.ios-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; }
+.ios-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
+.section-title { padding: 0 10px; margin: 15px 0 5px 0; font-size: 13px; color: var(--text-sec); text-transform: uppercase; }
+
+/* CALENDAR (iOS Style) */
+.calendar-wrapper { background: white; border-radius: 12px; padding: 10px; margin: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); }
+.cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; font-size: 16px; color: var(--primary); }
+.cal-nav-btn { background: none; border: none; font-size: 22px; color: var(--primary); padding: 0 15px; cursor: pointer; }
+.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 5px; text-align: center; font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 600; }
+.calendar-widget { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.cal-day { height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; position: relative; cursor: pointer; border-radius: 50%; }
+.cal-day.today { color: var(--primary); font-weight: 700; }
+/* Серый контур для дат с турами, как просили */
+.cal-day.has-tour { border: 1px solid #C7C7CC; }
+.cal-day.has-tour::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; background: #8E8E93; border-radius: 50%; display:none;} /* Точку убрал, оставил обводку */
+
+/* CARDS & LISTS */
+.tour-item-row { background: white; padding: 15px; margin: 8px 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.tour-date-box { display: flex; flex-direction: column; align-items: center; background: #F2F2F7; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-right: 12px; min-width: 40px;}
+.tour-info { flex: 1; }
+.tour-title { font-weight: 600; font-size: 16px; margin-bottom: 3px; }
+.tour-meta { font-size: 13px; color: var(--text-sec); }
+.ios-list { background: white; margin: 10px; border-radius: 12px; overflow: hidden; }
+.ios-list-item { padding: 12px 15px; border-bottom: 1px solid #E5E5EA; display: flex; justify-content: space-between; align-items: center; }
+.ios-list-item:last-child { border-bottom: none; }
+
+/* QUICK ACTIONS */
+.quick-actions-row { display: flex; gap: 10px; padding: 0 10px; overflow-x: auto; margin-bottom: 10px; }
+.btn-chip { background: #E1F0FF; color: var(--primary); border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; white-space: nowrap; cursor: pointer; }
+
+/* FORMS */
+.ios-form-group { background: white; margin: 10px; padding: 15px; border-radius: 12px; }
+.ios-input { width: 100%; padding: 14px; border: 1px solid #E5E5EA; border-radius: 10px; font-size: 16px; background: #F9F9F9; box-sizing: border-box; margin-bottom: 12px; -webkit-appearance: none;}
+.btn-primary { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.btn-danger { background: var(--danger); color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 10px; }
+.btn-text { background: none; border: none; color: var(--primary); font-size: 17px; cursor: pointer; }
+.btn-back { background: none; border: none; color: var(--primary); font-size: 17px; cursor: pointer; padding:0; display:flex; align-items:center; }
+.btn-back::before { content: '‹'; font-size: 28px; margin-right: 5px; margin-top:-4px; }
+
+/* TOGGLE SWITCH */
+.switch { position: relative; display: inline-block; width: 50px; height: 30px; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+.slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+input:checked + .slider { background-color: var(--success); }
+input:checked + .slider:before { transform: translateX(20px); }
+
+/* REPORTS */
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
+.report-card { background: white; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+.report-card.main { grid-column: span 2; background: var(--primary); }
+.report-card.main * { color: white !important; }
+.rc-label { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; }
+.rc-val { font-size: 20px; font-weight: 700; }
+
+/* MODALS */
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; }
+.modal.open { display: flex; }
+.modal-content { background: #F2F2F7; padding: 20px; border-radius: 20px; width: 90%; max-width: 350px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
+.counter-row { display: flex; justify-content: center; gap: 15px; align-items: center; margin: 15px 0; }
+.counter-row button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #C6C6C8; background: white; font-size: 20px; }
+
+/* BUS & EXTRAS */
+.seats-wrapper { overflow-x: auto; padding: 5px 10px; }
+.bus-grid-sm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; min-width: 280px; }
+.seat-sm { height: 45px; border-radius: 8px; border: 1px solid #C6C6C8; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; cursor: pointer; background: white; }
+.seat-sm.taken { background: var(--success); color: white; border:none;} .seat-sm.pending { background: var(--warning); border:none;}
+.bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: rgba(255,255,255,0.95); border-top: 1px solid #C6C6C8; display: flex; padding: 10px 0 25px 0; z-index: 900; }
+.nav-item { flex: 1; text-align: center; color: #8E8E93; font-size: 10px; cursor: pointer; } .nav-item.active { color: var(--primary); } .nav-icon { font-size: 24px; margin-bottom: 2px; }
+.role-badge { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 10px; }
+.rb-driver { background: #E1F0FF; color: var(--primary); } .rb-guide { background: #FFF4E5; color: var(--warning); } .rb-agent { background: #E8F5E9; color: var(--success); }
+.row-between { display: flex; justify-content: space-between; align-items: center; }
+.week-selector { display: flex; justify-content: space-between; }
+.day-check { width: 35px; height: 35px; background: #E5E5EA; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
+.day-check.selected { background: var(--primary); color: white; }

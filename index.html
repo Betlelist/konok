@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KONOK 12.0 Mobile</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="app-container">
+
+        <div id="screen-login" class="screen active center-content">
+            <div class="login-box">
+                <div class="logo-circle">K</div>
+                <h1>KONOK</h1>
+                <p class="text-muted">Travel CRM v12</p>
+                <div class="ios-form">
+                    <input type="text" id="login-phone" placeholder="Логин">
+                    <input type="password" id="login-pass" placeholder="Пароль">
+                </div>
+                <div class="login-hints"><small>admin: 123 | agent: 000</small></div>
+                <button class="btn btn-primary" id="btn-login-action">Войти</button>
+            </div>
+        </div>
+
+        <div id="screen-tours" class="screen">
+            <div class="ios-header">
+                <h2>Главная</h2>
+                <div class="user-avatar" id="current-user-role">A</div>
+            </div>
+
+            <div class="calendar-wrapper">
+                <div class="cal-header">
+                    <button class="cal-nav-btn" onclick="UI.changeMonth(-1)">‹</button>
+                    <span id="cal-month-year">Май 2026</span>
+                    <button class="cal-nav-btn" onclick="UI.changeMonth(1)">›</button>
+                </div>
+                <div class="cal-weekdays">
+                    <span>Пн</span><span>Вт</span><span>Ср</span><span>Чт</span><span>Пт</span><span>Сб</span><span>Вс</span>
+                </div>
+                <div class="calendar-widget" id="calendar-widget"></div>
+            </div>
+            
+            <div class="quick-actions-row admin-only">
+                <button class="btn-chip" onclick="App.openDestModal()">+ Локация</button>
+                <button class="btn-chip" onclick="Data.prepareCreateTour()">+ Новый Тур</button>
+            </div>
+            
+            <h3 class="section-title">Предстоящие рейсы</h3>
+            <div id="tours-list"></div>
+        </div>
+
+        <div id="screen-staff" class="screen">
+            <div class="ios-header">
+                <h2>Команда</h2>
+                <button class="btn-text admin-only" onclick="App.openEmployeeModal()">Добавить</button>
+            </div>
+            <div id="staff-list" class="ios-list"></div>
+        </div>
+
+        <div id="screen-reports" class="screen">
+            <div class="ios-header">
+                <h2>Финансы</h2>
+            </div>
+            <div class="report-grid">
+                <div class="report-card main">
+                    <span class="rc-label">Чистая прибыль</span>
+                    <span class="rc-val" id="rep-net">0 с</span>
+                </div>
+                <div class="report-card" onclick="UI.showReportDetail('guide')">
+                    <span class="rc-label">Долги Гидов (На руках)</span>
+                    <span class="rc-val warning" id="rep-cash-hands">0 с</span>
+                </div>
+                <div class="report-card" onclick="UI.showReportDetail('agent')">
+                    <span class="rc-label">Агентские (%)</span>
+                    <span class="rc-val" id="rep-agent">0 с</span>
+                </div>
+                <div class="report-card">
+                    <span class="rc-label">Зарплаты (Все)</span>
+                    <span class="rc-val" id="rep-salary">0 с</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="screen-add-tour" class="screen">
+            <div class="ios-header">
+                <button class="btn-back" onclick="Router.go('screen-tours')">Отмена</button>
+                <h3 id="tour-form-title">Тур</h3>
+                <button class="btn-text" onclick="Data.saveTour()">Готово</button>
+            </div>
+            
+            <div class="ios-form-group">
+                <label>МАРШРУТ</label>
+                <div id="destinations-container"></div>
+                <button class="btn-link" onclick="Data.addDestInput()">+ Добавить точку</button>
+            </div>
+            
+            <div class="ios-form-group">
+                <label>ДАТА И ПОВТОР</label>
+                <input type="datetime-local" id="new-tour-date">
+                <div class="row-between">
+                    <span>Повторять (30 дней)</span>
+                    <label class="switch"><input type="checkbox" id="is-recurring" onchange="App.toggleRecurring()"><span class="slider round"></span></label>
+                </div>
+                <div id="recurring-days" style="display:none; margin-top:10px;">
+                    <div class="week-selector">
+                        <div class="day-check" data-day="1" onclick="this.classList.toggle('selected')">Пн</div>
+                        <div class="day-check" data-day="2" onclick="this.classList.toggle('selected')">Вт</div>
+                        <div class="day-check" data-day="3" onclick="this.classList.toggle('selected')">Ср</div>
+                        <div class="day-check" data-day="4" onclick="this.classList.toggle('selected')">Чт</div>
+                        <div class="day-check" data-day="5" onclick="this.classList.toggle('selected')">Пт</div>
+                        <div class="day-check" data-day="6" onclick="this.classList.toggle('selected')">Сб</div>
+                        <div class="day-check" data-day="0" onclick="this.classList.toggle('selected')">Вс</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="ios-form-group">
+                <label>ЭКОНОМИКА</label>
+                <input type="number" id="new-tour-price" placeholder="Цена билета">
+                <div class="row-inputs">
+                    <select id="new-tour-driver"></select>
+                    <input type="number" id="fee-driver" placeholder="ЗП">
+                </div>
+                <div class="row-inputs">
+                    <select id="new-tour-guide"></select>
+                    <input type="number" id="fee-guide" placeholder="ЗП">
+                </div>
+                <input type="number" id="fee-other" placeholder="Прочие расходы">
+            </div>
+        </div>
+
+        <div id="screen-details" class="screen">
+            <div class="ios-header">
+                <button class="btn-back" onclick="Router.go('screen-tours')">Назад</button>
+                <h3>Рейс</h3>
+                <button class="btn-text admin-only" onclick="Data.editCurrentTour()">Изм.</button>
+            </div>
+            
+            <div class="tour-summary-card">
+                <h2 id="detail-title">Название</h2>
+                <div class="roi-bar-bg admin-only"><div id="detail-progress" class="roi-bar-fill"></div></div>
+                <div class="roi-text admin-only"><span id="detail-income">0</span> / <span id="detail-expense">0</span></div>
+            </div>
+
+            <div class="seats-wrapper"><div class="bus-grid-sm" id="detail-grid"></div></div>
+
+            <div class="passenger-section">
+                <h4>Пассажиры</h4>
+                <div id="passenger-list-container"></div>
+                <button class="btn-outline" style="margin-top:15px;" onclick="App.generateManifest()">Копировать для WhatsApp</button>
+            </div>
+        </div>
+
+        <div id="modal-booking" class="modal">
+            <div class="modal-content">
+                <h3 id="modal-book-title">Пассажир</h3>
+                
+                <input type="tel" id="book-phone" class="ios-input" placeholder="Телефон" onblur="App.checkClient()">
+                <div id="client-badge" class="badge-hidden"></div>
+                <input type="text" id="book-name" class="ios-input" placeholder="Имя">
+                
+                <div class="row-between" style="background: white; padding: 10px; border-radius: 10px; margin: 15px 0;">
+                    <span>Статус оплаты</span>
+                    <label class="switch">
+                        <input type="checkbox" id="book-paid-switch">
+                        <span class="slider round"></span>
+                    </label>
+                </div>
+
+                <div class="counter-row" id="seat-counter-block">
+                    <span style="font-size:14px; color:#888; margin-right:10px;">Мест:</span>
+                    <button onclick="App.changeSeatCount(-1)">-</button>
+                    <span id="book-count" style="font-weight:bold; font-size:18px; min-width:20px; text-align:center;">1</span>
+                    <button onclick="App.changeSeatCount(1)">+</button>
+                </div>
+
+                <button class="btn btn-primary" onclick="Data.saveBooking()">Сохранить</button>
+                <button class="btn btn-danger" id="btn-cancel-booking" onclick="Data.cancelBooking()">Отменить бронь</button>
+                <button class="btn btn-link" onclick="App.closeBookingModal()">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="modal-employee" class="modal">
+            <div class="modal-content">
+                <h3>Сотрудник</h3>
+                <input type="text" id="emp-name" class="ios-input" placeholder="Имя">
+                <input type="tel" id="emp-phone" class="ios-input" placeholder="Телефон">
+                <select id="emp-role" class="ios-input" onchange="App.toggleCapacityField()">
+                    <option value="driver">Водитель</option>
+                    <option value="guide">Гид</option>
+                    <option value="agent">Агент (Партнер)</option>
+                </select>
+                <div id="emp-extra-fields">
+                    <input type="number" id="emp-capacity" class="ios-input" placeholder="Мест в авто (18)" value="18">
+                    <input type="number" id="emp-commission" class="ios-input" placeholder="Комиссия агента (%)" style="display:none;">
+                </div>
+                <button class="btn btn-primary" onclick="Data.saveEmployee()">Сохранить</button>
+                <button class="btn btn-link" onclick="App.closeEmployeeModal()">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="modal-destinations" class="modal">
+            <div class="modal-content">
+                <h3>Локации</h3>
+                <div class="row-inputs">
+                    <input type="text" id="new-dest-name" placeholder="Название">
+                    <button class="btn-primary" style="width:auto; margin:0;" onclick="Data.addDestinationToDb()">+</button>
+                </div>
+                <div id="dest-list-db" class="ios-list-simple"></div>
+                <button class="btn btn-link" onclick="document.getElementById('modal-destinations').classList.remove('open')">Закрыть</button>
+            </div>
+        </div>
+        <div id="modal-day-details" class="modal bottom-sheet">
+            <div class="modal-content">
+                <h3 id="day-modal-title">Дата</h3>
+                <div id="day-tours-list" class="ios-list-simple"></div>
+                <button class="btn btn-primary" id="btn-create-on-date">Создать тур</button>
+                <button class="btn btn-link" onclick="document.getElementById('modal-day-details').classList.remove('open')">Закрыть</button>
+            </div>
+        </div>
+        <div id="modal-report-detail" class="modal">
+            <div class="modal-content">
+                <h3 id="report-detail-title">Детали</h3>
+                <div id="report-detail-list" class="ios-list-simple"></div>
+                <button class="btn btn-link" onclick="document.getElementById('modal-report-detail').classList.remove('open')">Закрыть</button>
+            </div>
+        </div>
+        <div id="modal-deposit" class="modal">
+            <div class="modal-content">
+                <h3>Инкассация</h3>
+                <p id="deposit-guide-name">Гид</p>
+                <input type="number" id="deposit-amount" class="ios-input" placeholder="Сумма сдачи">
+                <button class="btn btn-primary" onclick="Data.makeDeposit()">Принять</button>
+                <button class="btn btn-link" onclick="document.getElementById('modal-deposit').classList.remove('open')">Отмена</button>
+            </div>
+        </div>
+
+        <div id="bottom-nav" class="bottom-nav" style="display: none;">
+            <div class="nav-item active" onclick="Router.go('screen-tours')">📅 Туры</div>
+            <div class="nav-item admin-only" onclick="Router.go('screen-reports')">📊 Отчеты</div>
+            <div class="nav-item admin-only" onclick="Router.go('screen-staff')">👥 Команда</div>
+        </div>
+
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
