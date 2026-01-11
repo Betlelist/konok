@@ -1,81 +1,219 @@
-:root { --primary: #007AFF; --bg: #F2F2F7; --card-bg: #FFFFFF; --text: #000000; --text-sec: #8E8E93; --success: #34C759; --danger: #FF3B30; --warning: #FF9500; }
-body { font-family: -apple-system, sans-serif; background: var(--bg); margin: 0; color: var(--text); padding-bottom: 90px; -webkit-tap-highlight-color: transparent; }
-.app-container { max-width: 500px; margin: 0 auto; background: var(--bg); min-height: 100vh; }
-.center-content { display: flex; align-items: center; justify-content: center; height: 100vh; }
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KONOK 13.0 Clean</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
 
-/* HEADER & TITLES */
-.ios-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 10px; }
-.ios-header h2 { margin: 0; font-size: 32px; font-weight: 700; }
-.section-title { padding: 0 10px; margin: 15px 0 5px 0; font-size: 13px; color: var(--text-sec); text-transform: uppercase; }
+    <div class="app-container">
 
-/* CALENDAR (iOS Style) */
-.calendar-wrapper { background: white; border-radius: 12px; padding: 10px; margin: 10px; box-shadow: 0 1px 5px rgba(0,0,0,0.05); }
-.cal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-weight: 600; font-size: 16px; color: var(--primary); }
-.cal-nav-btn { background: none; border: none; font-size: 22px; color: var(--primary); padding: 0 15px; cursor: pointer; }
-.cal-weekdays { display: grid; grid-template-columns: repeat(7, 1fr); margin-bottom: 5px; text-align: center; font-size: 10px; color: var(--text-sec); text-transform: uppercase; font-weight: 600; }
-.calendar-widget { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
-.cal-day { height: 36px; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 16px; position: relative; cursor: pointer; border-radius: 50%; }
-.cal-day.today { color: var(--primary); font-weight: 700; }
-/* Серый контур для дат с турами, как просили */
-.cal-day.has-tour { border: 1px solid #C7C7CC; }
-.cal-day.has-tour::after { content: ''; position: absolute; bottom: 3px; width: 4px; height: 4px; background: #8E8E93; border-radius: 50%; display:none;} /* Точку убрал, оставил обводку */
+        <div id="screen-login" class="screen active center-content">
+            <div class="login-box">
+                <div class="logo-circle">K</div>
+                <h1>KONOK</h1>
+                <p class="text-muted">Travel CRM</p>
+                <div class="ios-form">
+                    <input type="text" id="login-phone" placeholder="Логин">
+                    <input type="password" id="login-pass" placeholder="Пароль">
+                </div>
+                <div class="login-hints"><small>admin: 123 | agent: 000</small></div>
+                <button class="btn btn-primary" id="btn-login-action">Войти</button>
+            </div>
+        </div>
 
-/* CARDS & LISTS */
-.tour-item-row { background: white; padding: 15px; margin: 8px 10px; border-radius: 12px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.tour-date-box { display: flex; flex-direction: column; align-items: center; background: #F2F2F7; padding: 5px 10px; border-radius: 8px; font-size: 12px; font-weight: 600; color: var(--text-sec); margin-right: 12px; min-width: 40px;}
-.tour-info { flex: 1; }
-.tour-title { font-weight: 600; font-size: 16px; margin-bottom: 3px; }
-.tour-meta { font-size: 13px; color: var(--text-sec); }
-.ios-list { background: white; margin: 10px; border-radius: 12px; overflow: hidden; }
-.ios-list-item { padding: 12px 15px; border-bottom: 1px solid #E5E5EA; display: flex; justify-content: space-between; align-items: center; }
-.ios-list-item:last-child { border-bottom: none; }
+        <div id="screen-tours" class="screen">
+            <div class="ios-header">
+                <div>
+                    <h2 class="header-title">Рейсы</h2>
+                    <span class="header-subtitle" id="header-date">Сегодня</span>
+                </div>
+                <div class="header-icons">
+                    <button class="icon-btn" onclick="App.openCalendarModal()">📅</button>
+                    <button class="icon-btn" onclick="App.logout()">🚪</button>
+                </div>
+            </div>
 
-/* QUICK ACTIONS */
-.quick-actions-row { display: flex; gap: 10px; padding: 0 10px; overflow-x: auto; margin-bottom: 10px; }
-.btn-chip { background: #E1F0FF; color: var(--primary); border: none; padding: 8px 16px; border-radius: 20px; font-weight: 600; font-size: 14px; white-space: nowrap; cursor: pointer; }
+            <div id="tours-list" class="clean-list"></div>
+            
+            <button class="fab-main admin-only" onclick="Data.prepareCreateTour()">+</button>
+        </div>
 
-/* FORMS */
-.ios-form-group { background: white; margin: 10px; padding: 15px; border-radius: 12px; }
-.ios-input { width: 100%; padding: 14px; border: 1px solid #E5E5EA; border-radius: 10px; font-size: 16px; background: #F9F9F9; box-sizing: border-box; margin-bottom: 12px; -webkit-appearance: none;}
-.btn-primary { background: var(--primary); color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-.btn-danger { background: var(--danger); color: white; border: none; width: 100%; padding: 16px; border-radius: 14px; font-size: 17px; font-weight: 600; cursor: pointer; margin-top: 10px; }
-.btn-text { background: none; border: none; color: var(--primary); font-size: 17px; cursor: pointer; }
-.btn-back { background: none; border: none; color: var(--primary); font-size: 17px; cursor: pointer; padding:0; display:flex; align-items:center; }
-.btn-back::before { content: '‹'; font-size: 28px; margin-right: 5px; margin-top:-4px; }
+        <div id="screen-staff" class="screen">
+            <div class="ios-header">
+                <h2>Команда</h2>
+                <button class="btn-text admin-only" onclick="App.openEmployeeModal()">+</button>
+            </div>
+            <div id="staff-list" class="ios-list"></div>
+        </div>
 
-/* TOGGLE SWITCH */
-.switch { position: relative; display: inline-block; width: 50px; height: 30px; }
-.switch input { opacity: 0; width: 0; height: 0; }
-.slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-.slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .4s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
-input:checked + .slider { background-color: var(--success); }
-input:checked + .slider:before { transform: translateX(20px); }
+        <div id="screen-reports" class="screen">
+            <div class="ios-header">
+                <h2>Финансы</h2>
+            </div>
+            <div class="report-grid">
+                <div class="report-card main">
+                    <span class="rc-label">Прибыль</span>
+                    <span class="rc-val" id="rep-net">0 с</span>
+                </div>
+                <div class="report-card" onclick="UI.showReportDetail('guide')">
+                    <span class="rc-label">Долги Гидов</span>
+                    <span class="rc-val warning" id="rep-cash-hands">0 с</span>
+                </div>
+                <div class="report-card" onclick="UI.showReportDetail('agent')">
+                    <span class="rc-label">Агентские</span>
+                    <span class="rc-val" id="rep-agent">0 с</span>
+                </div>
+                <div class="report-card">
+                    <span class="rc-label">Касса</span>
+                    <span class="rc-val success" id="rep-cash-safe">0 с</span>
+                </div>
+            </div>
+        </div>
 
-/* REPORTS */
-.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 10px; }
-.report-card { background: white; padding: 15px; border-radius: 12px; display: flex; flex-direction: column; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-.report-card.main { grid-column: span 2; background: var(--primary); }
-.report-card.main * { color: white !important; }
-.rc-label { font-size: 11px; color: var(--text-sec); margin-bottom: 4px; }
-.rc-val { font-size: 20px; font-weight: 700; }
+        <div id="screen-add-tour" class="screen">
+            <div class="ios-header">
+                <button class="btn-back" onclick="Router.go('screen-tours')">Отмена</button>
+                <h3 id="tour-form-title">Новый</h3>
+                <button class="btn-text" onclick="Data.saveTour()">Готово</button>
+            </div>
+            
+            <div class="ios-form-group">
+                <div class="row-between">
+                    <label>МАРШРУТ</label>
+                    <button class="btn-link-sm" onclick="App.openDestModal()">⚙️ Спис.</button>
+                </div>
+                <div id="destinations-container"></div>
+                <button class="btn-link" onclick="Data.addDestInput()">+ Точка</button>
+            </div>
+            
+            <div class="ios-form-group">
+                <label>КОГДА</label>
+                <input type="datetime-local" id="new-tour-date">
+                <div class="row-between" style="margin-top:10px;">
+                    <span>Повторять (30 дней)</span>
+                    <label class="switch"><input type="checkbox" id="is-recurring" onchange="App.toggleRecurring()"><span class="slider round"></span></label>
+                </div>
+                <div id="recurring-days" style="display:none; margin-top:10px;">
+                    <div class="week-selector">
+                        <div class="day-check" data-day="1" onclick="this.classList.toggle('selected')">Пн</div>
+                        <div class="day-check" data-day="2" onclick="this.classList.toggle('selected')">Вт</div>
+                        <div class="day-check" data-day="3" onclick="this.classList.toggle('selected')">Ср</div>
+                        <div class="day-check" data-day="4" onclick="this.classList.toggle('selected')">Чт</div>
+                        <div class="day-check" data-day="5" onclick="this.classList.toggle('selected')">Пт</div>
+                        <div class="day-check" data-day="6" onclick="this.classList.toggle('selected')">Сб</div>
+                        <div class="day-check" data-day="0" onclick="this.classList.toggle('selected')">Вс</div>
+                    </div>
+                </div>
+            </div>
 
-/* MODALS */
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(5px); z-index: 1000; align-items: center; justify-content: center; }
-.modal.open { display: flex; }
-.modal-content { background: #F2F2F7; padding: 20px; border-radius: 20px; width: 90%; max-width: 350px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); }
-.counter-row { display: flex; justify-content: center; gap: 15px; align-items: center; margin: 15px 0; }
-.counter-row button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid #C6C6C8; background: white; font-size: 20px; }
+            <div class="ios-form-group">
+                <label>ДЕТАЛИ</label>
+                <input type="number" id="new-tour-price" placeholder="Цена билета">
+                <div class="row-inputs">
+                    <select id="new-tour-driver"></select>
+                    <input type="number" id="fee-driver" placeholder="ЗП">
+                </div>
+                <div class="row-inputs">
+                    <select id="new-tour-guide"></select>
+                    <input type="number" id="fee-guide" placeholder="ЗП">
+                </div>
+                <input type="number" id="fee-other" placeholder="Расходы">
+            </div>
+        </div>
 
-/* BUS & EXTRAS */
-.seats-wrapper { overflow-x: auto; padding: 5px 10px; }
-.bus-grid-sm { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; min-width: 280px; }
-.seat-sm { height: 45px; border-radius: 8px; border: 1px solid #C6C6C8; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 600; cursor: pointer; background: white; }
-.seat-sm.taken { background: var(--success); color: white; border:none;} .seat-sm.pending { background: var(--warning); border:none;}
-.bottom-nav { position: fixed; bottom: 0; width: 100%; max-width: 500px; background: rgba(255,255,255,0.95); border-top: 1px solid #C6C6C8; display: flex; padding: 10px 0 25px 0; z-index: 900; }
-.nav-item { flex: 1; text-align: center; color: #8E8E93; font-size: 10px; cursor: pointer; } .nav-item.active { color: var(--primary); } .nav-icon { font-size: 24px; margin-bottom: 2px; }
-.role-badge { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; margin-right: 10px; }
-.rb-driver { background: #E1F0FF; color: var(--primary); } .rb-guide { background: #FFF4E5; color: var(--warning); } .rb-agent { background: #E8F5E9; color: var(--success); }
-.row-between { display: flex; justify-content: space-between; align-items: center; }
-.week-selector { display: flex; justify-content: space-between; }
-.day-check { width: 35px; height: 35px; background: #E5E5EA; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; cursor: pointer; }
-.day-check.selected { background: var(--primary); color: white; }
+        <div id="screen-details" class="screen">
+            <div class="ios-header">
+                <button class="btn-back" onclick="Router.go('screen-tours')">Назад</button>
+                <h3>Рейс</h3>
+                <button class="btn-text admin-only" onclick="Data.editCurrentTour()">Изм.</button>
+            </div>
+            
+            <div class="tour-summary-card">
+                <div class="row-between">
+                    <h2 id="detail-title">Название</h2>
+                    <button class="btn-icon-small" onclick="App.openStoryModal()">📸</button>
+                </div>
+                <div id="hot-tour-control" style="display:none; margin-top:5px;">
+                    <span class="badge-hot">ГОРЯЩИЙ</span>
+                </div>
+                <div class="roi-bar-bg admin-only"><div id="detail-progress" class="roi-bar-fill"></div></div>
+                <div class="roi-text admin-only"><span id="detail-income">0</span> / <span id="detail-expense">0</span></div>
+            </div>
+
+            <div class="seats-wrapper"><div class="bus-grid-sm" id="detail-grid"></div></div>
+
+            <div class="passenger-section">
+                <h4>Пассажиры</h4>
+                <div id="passenger-list-container"></div>
+                <div class="row-between" style="margin-top:20px;">
+                    <button class="btn-outline" style="width:48%" onclick="App.generateManifest()">Список</button>
+                    <button class="btn-primary" style="width:48%; margin:0;" onclick="App.openWaModal()">WhatsApp</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="modal-calendar" class="modal bottom-sheet">
+            <div class="modal-content">
+                <div class="cal-header">
+                    <button class="cal-nav-btn" onclick="UI.changeMonth(-1)">‹</button>
+                    <span id="cal-month-year">Май</span>
+                    <button class="cal-nav-btn" onclick="UI.changeMonth(1)">›</button>
+                </div>
+                <div class="cal-weekdays"><span>ПН</span><span>ВТ</span><span>СР</span><span>ЧТ</span><span>ПТ</span><span>СБ</span><span>ВС</span></div>
+                <div class="calendar-widget" id="calendar-widget"></div>
+                <button class="btn btn-link" onclick="document.getElementById('modal-calendar').classList.remove('open')">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="modal-booking" class="modal">
+            <div class="modal-content">
+                <h3 id="modal-book-title">Бронь</h3>
+                <input type="tel" id="book-phone" class="ios-input" placeholder="Телефон" onblur="App.checkClient()">
+                <div id="client-badge" class="badge-hidden"></div>
+                <input type="text" id="book-name" class="ios-input" placeholder="Имя">
+                
+                <div class="row-between" style="background:white; padding:10px; border-radius:10px; margin:10px 0;">
+                    <span>Оплачено</span>
+                    <label class="switch"><input type="checkbox" id="book-paid-switch"><span class="slider round"></span></label>
+                </div>
+
+                <div class="counter-row" id="seat-counter-block">
+                    <span>Мест:</span>
+                    <button onclick="App.changeSeatCount(-1)">-</button><span id="book-count">1</span><button onclick="App.changeSeatCount(1)">+</button>
+                </div>
+
+                <button class="btn btn-primary" onclick="Data.saveBooking()">Сохранить</button>
+                <button class="btn btn-danger" id="btn-cancel-booking" onclick="Data.cancelBooking()">Удалить</button>
+                <button class="btn btn-link" onclick="App.closeBookingModal()">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="modal-day-details" class="modal bottom-sheet">
+            <div class="modal-content">
+                <h3 id="day-modal-title">Дата</h3>
+                <div id="day-tours-list" class="ios-list-simple"></div>
+                <button class="btn btn-primary admin-only" id="btn-create-on-date">Создать тур</button>
+                <button class="btn btn-link" onclick="document.getElementById('modal-day-details').classList.remove('open')">Закрыть</button>
+            </div>
+        </div>
+
+        <div id="modal-destinations" class="modal"><div class="modal-content"><h3>Локации</h3><div class="row-inputs"><input type="text" id="new-dest-name" placeholder="Название"><button class="btn-primary" style="width:auto;margin:0" onclick="Data.addDestinationToDb()">+</button></div><div id="dest-list-db" class="ios-list-simple"></div><button class="btn btn-link" onclick="document.getElementById('modal-destinations').classList.remove('open')">Закрыть</button></div></div>
+        <div id="modal-whatsapp" class="modal bottom-sheet"><div class="modal-content"><h3>WhatsApp</h3><div class="segment-control"><button class="seg-btn active" onclick="App.setWaTemplate('info')">Инфо</button><button class="seg-btn" onclick="App.setWaTemplate('review')">Отзыв</button></div><textarea id="wa-text-area" rows="5" class="ios-input"></textarea><button class="btn btn-primary" onclick="App.copyWaText()">Копировать</button><button class="btn btn-link" onclick="document.getElementById('modal-whatsapp').classList.remove('open')">Закрыть</button></div></div>
+        <div id="modal-story" class="modal"><div class="modal-content" style="background:#222;color:white;text-align:center"><div class="story-card"><div class="story-date" id="story-date">ЗАВТРА</div><h2 id="story-title">Тур</h2><div class="story-price" id="story-price">0c</div><div class="story-seats" id="story-seats">Места есть!</div></div><button class="btn btn-link" style="color:white" onclick="document.getElementById('modal-story').classList.remove('open')">Закрыть</button></div></div>
+        <div id="modal-report-detail" class="modal"><div class="modal-content"><h3 id="report-detail-title">Детали</h3><div id="report-detail-list" class="ios-list-simple"></div><button class="btn btn-link" onclick="document.getElementById('modal-report-detail').classList.remove('open')">Закрыть</button></div></div>
+        <div id="modal-deposit" class="modal"><div class="modal-content"><h3>Сдача</h3><p id="deposit-guide-name">Гид</p><input type="number" id="deposit-amount" class="ios-input" placeholder="Сумма"><button class="btn btn-primary" onclick="Data.makeDeposit()">Принять</button><button class="btn btn-link" onclick="document.getElementById('modal-deposit').classList.remove('open')">Отмена</button></div></div>
+        <div id="modal-employee" class="modal"><div class="modal-content"><h3 id="emp-modal-title">Сотрудник</h3><input type="text" id="emp-name" class="ios-input" placeholder="Имя"><input type="tel" id="emp-phone" class="ios-input" placeholder="Телефон"><select id="emp-role" class="ios-input" onchange="App.toggleCapacityField()"><option value="driver">Водитель</option><option value="guide">Гид</option><option value="agent">Агент</option></select><div id="emp-extra-fields"><input type="number" id="emp-capacity" class="ios-input" placeholder="Мест (18)" value="18"><input type="number" id="emp-commission" class="ios-input" placeholder="%" style="display:none"></div><button class="btn btn-primary" onclick="Data.saveEmployee()">Сохранить</button><button class="btn btn-link" onclick="App.closeEmployeeModal()">Закрыть</button></div></div>
+
+        <div id="bottom-nav" class="bottom-nav" style="display: none;">
+            <div class="nav-item active" onclick="Router.go('screen-tours')"><div class="nav-icon">📅</div><span>Туры</span></div>
+            <div class="nav-item admin-only" onclick="Router.go('screen-reports')"><div class="nav-icon">📊</div><span>Отчеты</span></div>
+            <div class="nav-item admin-only" onclick="Router.go('screen-staff')"><div class="nav-icon">👥</div><span>Команда</span></div>
+        </div>
+
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
