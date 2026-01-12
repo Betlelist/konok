@@ -1,20 +1,31 @@
 const App = {
-    init() {
-        DB.init(); Data.loadAll();
+    async init() {
+        // Показываем прелоадер или просто ждем
+        const success = await DB.init();
         
-        // SAFE BINDING (FIXED)
-        const loginBtn = document.getElementById('btn-login-action');
-        if(loginBtn) loginBtn.onclick = App.login;
-        
-        if(sessionStorage.getItem('logged')) {
-            window.currentUserRole = sessionStorage.getItem('role');
-            document.getElementById('dash-username-display').innerText = window.currentUserRole === 'admin' ? 'Admin' : 'Agent';
-            Router.go('screen-dashboard');
+        if(success) {
+            // Данные загружены, можно работать
+            Data.loadAll(); // Если у вас есть этот метод, или уберите его если все в DB
+            
+            // Навешиваем события
+            const loginBtn = document.getElementById('btn-login-action');
+            if(loginBtn) loginBtn.onclick = App.login;
+            
+            // Проверка входа
+            if(sessionStorage.getItem('logged')) {
+                window.currentUserRole = sessionStorage.getItem('role');
+                document.getElementById('dash-username-display').innerText = window.currentUserRole === 'admin' ? 'Admin' : 'Agent';
+                Router.go('screen-dashboard');
+            }
+            
+            // Модалки
+            document.querySelectorAll('.closable-modal').forEach(m => {
+                m.addEventListener('click', (e) => { if(e.target === m) App.closeModal(m.id); });
+            });
         }
-        document.querySelectorAll('.closable-modal').forEach(m => {
-            m.addEventListener('click', (e) => { if(e.target === m) App.closeModal(m.id); });
-        });
     },
+    
+    // ... весь остальной код контроллера БЕЗ ИЗМЕНЕНИЙ ...
     logAction(text) {
         const logs = DB.load(DB.KEYS.LOGS) || [];
         logs.unshift({text, time: new Date().toLocaleString()});
@@ -164,4 +175,5 @@ const Router = {
         if(id==='screen-staff') View.renderStaff();
         if(id==='screen-reports') View.renderReportStats();
     }
+
 };
