@@ -1,239 +1,71 @@
 const View = {
     calDate: new Date(),
-    formatDate(iso) { 
-        if(!iso) return ''; 
-        const d = new Date(iso); 
-        return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; 
-    },
     
-    // РЕНДЕР ОТЧЕТОВ (ОБНОВЛЕНО)
-    showReportDetail(type){ 
-        const l = document.getElementById('report-detail-list'); 
-        if(!l) return;
-        l.innerHTML = ''; 
-        
-        const staff = DB.load(DB.KEYS.STAFF);
-        const tours = DB.load(DB.KEYS.TOURS);
-
-        // --- ДЕТАЛИЗАЦИЯ ПО ГИДАМ ---
-        if(type === 'guide'){
-            const guides = staff.filter(s => s.role === 'guide');
-            let hasDebts = false;
-
-            guides.forEach(guide => {
-                // Если баланс 0 и нет активных туров, пропускаем (чтобы не засорять список)
-                if(guide.balance <= 0) return; 
-
-                hasDebts = true;
-                let passengerDetails = '';
-
-                // Ищем туры этого гида
-                tours.forEach(t => {
-                    if(t.guideId == guide.id) {
-                        // Ищем пассажиров с наличкой в этом туре
-                        const cashPax = t.seats.filter(s => 
-                            (s.status === 'taken' || s.status === 'partial') && 
-                            s.method === 'cash'
-                        );
-
-                        if(cashPax.length > 0) {
-                            passengerDetails += `<div style="margin-top:8px; padding-top:8px; border-top:1px solid #333; font-size:12px;">
-                                <div style="color:#888; margin-bottom:4px;">🚌 ${t.destinations[0]} (${View.formatDate(t.date)})</div>`;
-                            
-                            cashPax.forEach(p => {
-                                const amt = p.status === 'taken' ? t.price : t.price / 2;
-                                passengerDetails += `<div style="display:flex; justify-content:space-between; color:#ccc;">
-                                    <span>👤 ${p.name}</span>
-                                    <span>+${amt} с</span>
-                                </div>`;
-                            });
-                            passengerDetails += `</div>`;
-                        }
-                    }
-                });
-
-                // Карточка гида
-                const r = document.createElement('div');
-                r.className = 'list-item';
-                r.style.flexDirection = 'column';
-                r.style.alignItems = 'stretch';
-                r.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:5px;">
-                        <span style="font-size:16px; font-weight:700;">${guide.name}</span>
-                        <div style="text-align:right;">
-                            <div style="font-size:11px; color:#888;">Долг:</div>
-                            <strong class="text-warn" style="font-size:18px;">${guide.balance} с</strong>
-                        </div>
-                    </div>
-                    ${passengerDetails ? passengerDetails : '<div style="font-size:11px; color:#666;">Нет деталей по текущим рейсам (старый долг)</div>'}
-                    <button onclick="App.openDepositModal(${guide.id})" style="margin-top:10px; width:100%; background:#333; color:white; border:none; padding:10px; border-radius:8px; font-weight:600;">ПРИНЯТЬ ОПЛАТУ</button>
-                `;
-                l.appendChild(r);
-            });
-
-            if(!hasDebts) l.innerHTML = '<div style="padding:20px; text-align:center; color:#666">Никто ничего не должен 🎉</div>';
-        }
-
-        // --- ДЕТАЛИЗАЦИЯ ПРИБЫЛИ ---
-        if(type === 'net'){
-            tours.sort((a,b)=>new Date(b.date)-new Date(a.date)).forEach(t => {
-                const inc = t.seats.reduce((s,x)=>s+(x.status==='taken'?t.price:x.status==='partial'?t.price/2:0),0); 
-                const exp = t.expenses.driver+t.expenses.guide+t.expenses.other; 
-                const prof = inc - exp; 
-                
-                const r = document.createElement('div');
-                r.className = 'list-item';
-                r.style.justifyContent = 'space-between';
-                r.innerHTML = `
-                    <div>
-                        <b>${t.destinations[0]}</b> <span style="color:#666; font-size:12px;">${View.formatDate(t.date)}</span>
-                        <div style="font-size:11px; color:#888;">Выр: ${inc} - Расх: ${exp}</div>
-                    </div>
-                    <b class="${prof>=0?'text-ok':'text-warn'}">${prof > 0 ? '+' : ''}${prof}</b>
-                `;
-                l.appendChild(r);
-            });
-        }
-
-        // --- ДЕТАЛИЗАЦИЯ ВОДИТЕЛЕЙ ---
-        if(type === 'driver'){
-            tours.forEach(t => {
-                if(t.expenses.driver > 0) {
-                    // Ищем имя водителя
-                    const drName = staff.find(s=>s.id == t.driverId)?.name || 'Неизвестный';
-                    const r = document.createElement('div');
-                    r.className = 'list-item';
-                    r.style.justifyContent = 'space-between';
-                    r.innerHTML = `
-                        <div>
-                            <b>${drName}</b> <br>
-                            <span style="color:#666; font-size:12px;">${t.destinations[0]} (${View.formatDate(t.date)})</span>
-                        </div>
-                        <b style="color:#fff;">${t.expenses.driver} с</b>
-                    `;
-                    l.appendChild(r);
-                }
-            });
-        }
-
-        document.getElementById('modal-report-detail').classList.add('open'); 
+    setText(id, text) { const el = document.getElementById(id); if (el) el.innerText = text; },
+    formatDate(iso) { if(!iso)return''; try {const d=new Date(iso); return `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getFullYear()).slice(-2)}`; } catch(e) { return iso; }},
+    
+    renderFinanceHub() {
+        const tours = DB.load(DB.KEYS.TOURS) || []; const trans = DB.load(DB.KEYS.TRANS) || []; const staff = DB.load(DB.KEYS.STAFF) || [];
+        let totalInc = 0, totalExp = 0; let chartData = {}; let tourStats = {}; let paymentStats = { 'cash': 0, 'mbank': 0, 'optima': 0, 'other': 0 };
+        tours.forEach(t => {
+            if(!App.isDateInFilter(t.date)) return;
+            let tourInc = 0; const expenses = t.expenses || {}; const vipList = Array.isArray(expenses.vipList) ? expenses.vipList : []; const price = t.price || 0; const destName = t.destinations[0] || 'Тур';
+            if(!tourStats[destName]) tourStats[destName] = {profit: 0, revenue: 0, count: 0};
+            (t.seats||[]).forEach(s => { if(s && !s.isGift && s.status !== 'free') { let amount = (s.status === 'taken') ? price : (s.status === 'partial' ? price/2 : 0); tourInc += amount; const method = s.method || 'cash'; if (paymentStats[method] !== undefined) paymentStats[method] += amount; else paymentStats['other'] += amount; } });
+            const vipExp = vipList.reduce((s, v) => s + (v.cost||0), 0); const tourExp = (expenses.driver||0) + (expenses.guide||0) + (expenses.other||0) + vipExp;
+            totalInc += tourInc; totalExp += tourExp; const profit = tourInc - tourExp;
+            tourStats[destName].profit += profit; tourStats[destName].revenue += tourInc; tourStats[destName].count += 1;
+            const dateKey = t.date ? t.date.slice(5, 10) : 'N/A'; if(!chartData[dateKey]) chartData[dateKey] = 0; chartData[dateKey] += profit;
+        });
+        trans.filter(tr => tr.type === 'expense').forEach(tr => { if(App.isDateInFilter(tr.date)) totalExp += (tr.amount||0); });
+        const elNet = document.getElementById('hub-net'); if (elNet) { elNet.innerText = (totalInc - totalExp) + ' с'; elNet.className = `ac-val ${(totalInc - totalExp)>=0?'text-ok':'text-warn'}`; }
+        const chartBox = document.getElementById('fin-chart-bars'); const labelsBox = document.getElementById('fin-chart-labels');
+        if(chartBox && labelsBox) { chartBox.innerHTML = ''; labelsBox.innerHTML = ''; const keys = Object.keys(chartData).sort().slice(-7); if(keys.length > 0) { const maxVal = Math.max(...keys.map(k => Math.abs(chartData[k]))) || 1; keys.forEach(k => { const val = chartData[k]; const h = Math.round((Math.abs(val) / maxVal) * 80) + 10; const bar = document.createElement('div'); bar.className = `chart-bar ${val >= 0 ? 'ok' : 'warn'}`; bar.style.height = `${h}%`; chartBox.appendChild(bar); const lbl = document.createElement('div'); lbl.innerText = k; labelsBox.appendChild(lbl); }); } else { chartBox.innerHTML = '<div style="width:100%;text-align:center;color:#666;align-self:center;font-size:10px">Нет данных</div>'; } }
+        const topToursBox = document.getElementById('top-tours-block');
+        if (topToursBox) { topToursBox.innerHTML = ''; const sortedTours = Object.entries(tourStats).sort((a, b) => b[1].profit - a[1].profit).slice(0, 3); if(sortedTours.length === 0) topToursBox.innerHTML = '<div style="color:#666; font-size:12px; text-align:center">Нет данных</div>'; sortedTours.forEach((item, index) => { const [name, stat] = item; const div = document.createElement('div'); div.className = 'top-tour-item'; div.innerHTML = `<div class="tt-rank">${index + 1}</div><div class="tt-info"><span class="tt-name">${name}</span><span style="font-size:11px; color:var(--text-sec)">Рейсов: ${stat.count}</span></div><div class="tt-profit">+${stat.profit} с</div>`; topToursBox.appendChild(div); }); }
+        const payBox = document.getElementById('payment-breakdown-block');
+        if (payBox) { payBox.innerHTML = ''; const div = document.createElement('div'); div.className = 'analytics-card'; let cashHoldersHtml = ''; const cashHolders = staff.filter(s => s.balance > 0); if (cashHolders.length > 0) { cashHolders.forEach(h => { cashHoldersHtml += `<div class="ac-row sub"><span>${h.name}</span><span>${h.balance} с</span></div>`; }); } else { cashHoldersHtml = `<div class="ac-row sub"><span>Вся наличка в кассе</span></div>`; } div.innerHTML = `<div class="ac-row"><span>💳 Mbank</span><span class="ac-val">${paymentStats.mbank} с</span></div><div class="ac-row"><span>💳 Optima</span><span class="ac-val">${paymentStats.optima} с</span></div><div class="ac-row" style="color:var(--warning)"><span>💵 Наличные (Всего)</span><span class="ac-val">${paymentStats.cash} с</span></div>${cashHoldersHtml}<div class="ac-row" style="border-top:1px solid var(--border); margin-top:5px; padding-top:10px;"><span>ВСЕГО</span><span class="ac-val">${totalInc} с</span></div>`; payBox.appendChild(div); }
     },
 
-    // ОСТАЛЬНЫЕ ФУНКЦИИ (БЕЗ ИЗМЕНЕНИЙ)
-    renderReportStats(){
-        const container = document.getElementById('fin-methods-list');
-        if(!container) return; container.innerHTML = '';
-        let net=0, cash=0; const tours = DB.load(DB.KEYS.TOURS);
-        const stats = { mbank:0, optima:0, obank:0, cash:0 };
-
-        tours.forEach(t => {
-            const exp = t.expenses.driver + t.expenses.guide + t.expenses.other;
-            let income = 0;
-            t.seats.forEach(s => {
-                let amount = 0;
-                if(s.status === 'taken') amount = t.price;
-                else if(s.status === 'partial') amount = t.price / 2;
-                if(amount > 0) {
-                    income += amount;
-                    const method = s.method || 'cash';
-                    if(stats[method] !== undefined) stats[method] += amount; else stats['cash'] += amount;
-                }
-            });
-            net += (income - exp);
-        });
-        
-        cash = DB.load(DB.KEYS.STAFF).reduce((s,x)=>s+(x.balance||0),0);
-        document.getElementById('rep-net').innerText=net+' с'; 
-        document.getElementById('rep-cash-hands').innerText=cash+' с'; 
-        document.getElementById('rep-cash-safe').innerText=(net-cash)+' с';
-
-        const labels = {mbank:'Mbank', optima:'Optima', obank:'O!Bank', cash:'Наличные'};
-        for (const [key, val] of Object.entries(stats)) {
-            if(val > 0) {
-                const r = document.createElement('div'); r.className = 'report-row';
-                r.innerHTML = `<span>${labels[key] || key}</span><strong class="text-ok">${val} с</strong>`;
-                container.appendChild(r);
-            }
-        }
-        
-        // Top Tours List
-        const list = document.getElementById('top-tours-list'); 
-        if(list) {
-            list.innerHTML='';
-            const prof = tours.map(t=>{ 
-                const inc = t.seats.reduce((sum,s)=>sum+(s.status==='taken'?t.price:(s.status==='partial'?t.price/2:0)),0); 
-                const exp = t.expenses.driver+t.expenses.guide+t.expenses.other; 
-                return {name:t.destinations[0], profit: inc-exp}; 
-            }).sort((a,b)=>b.profit-a.profit).slice(0,5);
-            
-            prof.forEach(p=>{ 
-                const r=document.createElement('div'); 
-                r.className='report-row'; 
-                r.innerHTML=`<span>${p.name}</span><strong class="text-ok">+${p.profit}</strong>`; 
-                list.appendChild(r); 
-            });
-        }
+    renderTourFinanceBar(t, seats) {
+        const expenses = t.expenses || { driver:0, guide:0, other:0, vipList:[] };
+        const vipExpTotal = (Array.isArray(expenses.vipList)?expenses.vipList:[]).reduce((s, v) => s + (v.cost||0), 0);
+        const totalFixedCost = (expenses.driver||0) + (expenses.guide||0) + (expenses.other||0) + vipExpTotal;
+        let currentRevenue = 0; seats.forEach(s => { if (!s || s.status === 'free' || s.isGift) return; if (s.status === 'taken') currentRevenue += (t.price || 0); else if (s.status === 'partial') currentRevenue += (t.price || 0) / 2; });
+        let percentage = totalFixedCost > 0 ? (currentRevenue / totalFixedCost) * 100 : (currentRevenue > 0 ? 100 : 0);
+        if (percentage > 100) percentage = 100;
+        const breakEvenRevenue = totalFixedCost - currentRevenue;
+        const ticketsNeeded = breakEvenRevenue > 0 ? Math.ceil(breakEvenRevenue / (t.price||1)) : 0;
+        const barClass = percentage < 50 ? 'low' : (percentage < 100 ? 'mid' : 'ok');
+        let statusText = breakEvenRevenue > 0 ? `Нужно ${ticketsNeeded} бил.` : `Прибыль: +${currentRevenue - totalFixedCost}`;
+        return `<div style="margin-top:15px; padding-top:10px; border-top:1px dashed var(--border);"><div class="fin-stats-row"><span>Расходы: ${totalFixedCost} с</span><span style="font-weight:700; color:var(--text)">${statusText}</span></div><div class="fin-bar-container"><div class="fin-bar-fill ${barClass}" style="width: ${percentage}%"></div></div><div class="fin-stats-row"><span>Выручка: ${currentRevenue} с</span><span>${Math.round(percentage)}%</span></div></div>`;
     },
 
     renderDetails(t) {
         if(!t) return;
-        document.getElementById('detail-title').innerText=t.destinations[0]; 
-        document.getElementById('detail-date').innerText=this.formatDate(t.date);
-        
-        const taken=t.seats.filter(s=>s.status!=='free').length;
-        const income = t.seats.reduce((sum, s) => sum + (s.status==='taken'?t.price:(s.status==='partial'?t.price/2:0)), 0);
-        const exp=t.expenses.driver+t.expenses.guide+t.expenses.other;
-        const percent = Math.min(Math.round((income / exp) * 100), 100) || 0;
-        
-        document.getElementById('detail-income').innerText=income; document.getElementById('detail-expense').innerText=exp;
-        document.getElementById('be-percent').innerText=`${percent}%`; document.getElementById('be-bar-fill').style.width=`${percent}%`;
-        
-        // --- COMPACT BUS LAYOUT ---
-        const g = document.getElementById('detail-grid'); 
-        if(g) {
-            g.innerHTML = '';
-            const wrapper = document.createElement('div');
-            wrapper.className = 'bus-layout-car';
-            wrapper.innerHTML = '<div class="driver-zone">ВОДИТЕЛЬ</div>';
-            const grid = document.createElement('div');
-            const isSmall = t.seats.length <= 8;
-            grid.className = isSmall ? 'bus-grid-compact small' : 'bus-grid-compact';
-            t.seats.forEach((s,i) => {
-                const d = document.createElement('div');
-                d.className = `seat-sm ${s.status}`;
-                d.innerText = i+1;
-                d.onclick = () => App.openBookingModal(i, s);
-                grid.appendChild(d);
-            });
-            wrapper.appendChild(grid);
-            g.appendChild(wrapper);
-        }
-        
-        const pl=document.getElementById('passenger-list-container'); 
-        if(pl){ 
-            pl.innerHTML=''; 
-            t.seats.forEach((s,i)=>{
-                if(s.status!=='free'){
-                    const stText={pending:'ЖДЕТ',partial:'50%',taken:'ОПЛ'}[s.status];
-                    const stClass={pending:'pending',partial:'partial',taken:'taken'}[s.status];
-                    const r=document.createElement('div');
-                    r.className='list-item';
-                    r.innerHTML=`<div><b>${i+1}. ${s.name}</b><br><small style="color:#888">${s.phone}</small></div><span class="pay-status ${stClass}">${stText}</span>`;
-                    r.onclick=()=>App.openBookingModal(i,s);
-                    pl.appendChild(r);
-                }
-            }); 
-        }
+        const seats = Array.isArray(t.seats) ? t.seats : []; const price = t.price || 0; const staff = DB.load(DB.KEYS.STAFF) || []; const driver = staff.find(s => s.id == t.driverId) || { name: 'Не назначен' }; const guide = staff.find(s => s.id == t.guideId) || { name: 'Не назначен' };
+        this.setText('detail-title', (t.type === 'vip' ? '💎 ' : '') + (t.destinations[0] || 'Тур'));
+        this.setText('detail-date', this.formatDate(t.date) + ' ' + (t.date ? t.date.slice(11,16) : ''));
+        const header = document.getElementById('tour-detail-header');
+        if(header) { header.innerHTML = `<div class="tour-header-card"><div class="th-title-row"><h2>${t.destinations ? t.destinations[0] : 'Тур'}</h2><div class="th-price-tag">${price} с</div></div><div class="th-grid"><div class="th-item"><span class="th-label">Водитель</span><span class="th-val">🚌 ${driver.name}</span></div><div class="th-item"><span class="th-label">Гид</span><span class="th-val">🚩 ${guide.name}</span></div></div>${this.renderTourFinanceBar(t, seats)}<button class="btn-main th-action-btn" onclick="App.openBookingModal(null, {status:'free'})">+ БРОНЬ</button></div>`; }
+        const progBlock = document.getElementById('extra-program-block'); if(progBlock) { if(t.type === 'vip' && t.expenses.vipList && t.expenses.vipList.length > 0) { progBlock.innerHTML = `<div class="analytics-card" style="padding:10px;"><div style="font-size:10px; color:var(--warning); margin-bottom:5px;">ВКЛЮЧЕНО В ТУР:</div>${t.expenses.vipList.map(v => `<div>✨ ${v.name}</div>`).join('')}</div>`; } else { progBlock.innerHTML = ''; } }
+        const g = document.getElementById('detail-grid'); if(g) { g.innerHTML = ''; const wrap = document.createElement('div'); wrap.className = 'bus-layout-car'; wrap.innerHTML='<div class="driver-zone">ВОДИТЕЛЬ</div>'; const grid = document.createElement('div'); grid.className = seats.length <= 8 ? 'bus-grid-compact small' : 'bus-grid-compact'; seats.forEach((s,i) => { const d = document.createElement('div'); const status = s ? s.status : 'free'; d.className = `seat-sm ${status} ${s && s.isGift ? 'gift' : ''}`; d.innerText = i+1; d.onclick = () => App.openBookingModal(i, s || {status:'free'}); grid.appendChild(d); }); wrap.appendChild(grid); g.appendChild(wrap); }
+        const tbody = document.getElementById('passenger-table-body'); if(tbody) { tbody.innerHTML = ''; let hasPax = false; seats.forEach((s,i) => { if(s && s.status !== 'free') { hasPax = true; const tr = document.createElement('tr'); tr.onclick = () => App.openBookingModal(i, s); tr.style.cursor = 'pointer'; let payText = s.isGift ? 'ПОДАРОК' : (s.status === 'taken' ? 'Оплачено' : (s.status === 'partial' ? 'Предоплата' : 'Ждет')); if(s.isGift) tr.style.color = '#BF5AF2'; else if(s.status === 'pending') tr.style.color = 'var(--warning)'; else if(s.status === 'partial') tr.style.color = 'var(--partial)'; else tr.style.color = 'var(--success)'; tr.innerHTML = `<td>${i+1}</td><td>${s.name}</td><td>${s.phone}</td><td>${payText}</td>`; tbody.appendChild(tr); } }); if(!hasPax) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:20px; color:#666;">Список пуст</td></tr>'; }
     },
 
-    renderLocations(){const l=document.getElementById('locations-list-screen'); l.innerHTML=''; DB.load(DB.KEYS.DESTS).forEach(d=>{const r=document.createElement('div');r.className='tour-card';r.innerHTML=`<div class="tc-info"><h4>${d.name}</h4><span class="tc-meta">${d.desc||''}</span></div>`;r.onclick=()=>{App.openDestModal(d.id)};l.appendChild(r)})}, 
-    renderStaff(){const l=document.getElementById('staff-list');l.innerHTML='';const staff=DB.load(DB.KEYS.STAFF);const roles={driver:'ВОДИТЕЛИ',guide:'ГИДЫ',agent:'АГЕНТЫ'};['driver','guide','agent'].forEach(role=>{const g=staff.filter(s=>s.role===role);if(g.length>0){const h=document.createElement('div');h.className='staff-group-header';h.innerText=roles[role];l.appendChild(h);g.forEach(s=>{const r=document.createElement('div');r.className='staff-row';const c=s.role==='agent'?`<br><small style="color:#888">Comm: ${s.commission}%</small>`:'';r.innerHTML=`<div><b>${s.name}</b><br><span style="color:#888;font-size:12px">${s.phone}</span>${c}</div><button class="btn-text" onclick="App.openEmployeeModal(${s.id})">ИЗМ</button>`;l.appendChild(r)})}})}, 
-    renderTours(){const list=document.getElementById('tours-list');list.innerHTML='';const tours=DB.load(DB.KEYS.TOURS);const gr={};tours.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t=>{const n=t.destinations[0];if(!gr[n])gr[n]=[];gr[n].push(t)});for(const[n,ts]of Object.entries(gr)){if(ts.length>1){const gd=document.createElement('div');gd.className='tour-group';gd.innerHTML=`<div class="group-header" onclick="this.nextElementSibling.classList.toggle('open')"><span>${n}</span><span class="group-badge">${ts.length}</span></div>`;const c=document.createElement('div');c.className='group-content';ts.forEach(t=>{const tk=t.seats.filter(s=>s.status!=='free').length;const r=document.createElement('div');r.className='tour-row';r.innerHTML=`<span>${View.formatDate(t.date)} ${t.date.slice(11,16)}</span> <span>${tk}/${t.seats.length}</span>`;r.onclick=()=>App.goToTour(t.id);c.appendChild(r)});gd.appendChild(c);list.appendChild(gd)}else{const t=ts[0];const tk=t.seats.filter(s=>s.status!=='free').length;const el=document.createElement('div');el.className='tour-card';el.innerHTML=`<div class="date-box"><span class="db-day">${t.date.slice(8,10)}</span><span class="db-mon">${t.date.slice(5,7)}</span></div><div class="tc-info"><h4>${t.destinations[0]}</h4><span class="tc-meta">${t.seats.length} мест • ${t.price}с</span></div><div class="tc-stat ${tk===t.seats.length?'full':''}">${tk}/${t.seats.length}</div>`;el.onclick=()=>App.goToTour(t.id);list.appendChild(el)}}}, 
-    renderTodayTomorrow(){const c=document.getElementById('widget-tt-content');if(!c)return;c.innerHTML='';const tours=DB.load(DB.KEYS.TOURS);const now=new Date();const tmr=new Date(now);tmr.setDate(tmr.getDate()+1);const upc=tours.filter(t=>{const d=new Date(t.date);return d.toDateString()===now.toDateString()||d.toDateString()===tmr.toDateString()}).sort((a,b)=>new Date(a.date)-new Date(b.date));if(upc.length===0){c.innerHTML='<div style="padding:10px;color:#888;text-align:center">Нет выездов</div>';return}upc.forEach(t=>{const tk=t.seats.filter(s=>s.status!=='free').length;const fr=t.seats.length-tk;const div=document.createElement('div');div.className='tt-item';div.innerHTML=`<div style="flex:1"><span class="tt-title">${t.destinations[0]}</span><br><span class="tt-meta">${t.date.slice(11,16)}</span></div><span class="tt-stat ${fr<5?'warn':'ok'}">${fr} своб.</span>`;div.onclick=()=>App.goToTour(t.id);c.appendChild(div)})}, 
-    renderStaffOptions(){const d=document.getElementById('new-tour-driver'),g=document.getElementById('new-tour-guide');d.innerHTML='<option value="">Водитель</option>';g.innerHTML='<option value="">Гид</option>';DB.load(DB.KEYS.STAFF).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.innerText=s.name;if(s.role==='driver')d.appendChild(o);if(s.role==='guide')g.appendChild(o)})}, 
-    renderTimeOptions(){const s=document.getElementById('new-tour-time-picker');s.innerHTML='';for(let h=5;h<=23;h++){['00','30'].forEach(m=>{const v=`${h<10?'0'+h:h}:${m}`;const o=document.createElement('option');o.value=v;o.innerText=v;if(v==='07:00')o.selected=true;s.appendChild(o)})}}, 
-    renderCalendar(){const c=document.getElementById('calendar-widget-modal');c.innerHTML='';const m=this.calDate.getMonth(),y=this.calDate.getFullYear(),d=new Date(y,m+1,0).getDate(),off=new Date(y,m,1).getDay()-1;document.getElementById('cal-month-year-modal').innerText=`${m+1}.${y}`;for(let i=0;i<(off<0?6:off);i++)c.appendChild(document.createElement('div'));const tours=DB.load(DB.KEYS.TOURS);for(let i=1;i<=d;i++){const div=document.createElement('div'),match=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;div.className='cal-day';div.innerText=i;if(tours.some(t=>t.date.startsWith(match)))div.classList.add('has-tour');div.onclick=()=>{View.openDayModal(match,tours.filter(t=>t.date.startsWith(match)))};c.appendChild(div)}}, 
-    changeMonth(d){this.calDate.setMonth(this.calDate.getMonth()+d);this.renderCalendar()}, 
-    openDayModal(d,ts){const l=document.getElementById('day-tours-list');l.innerHTML='';if(ts.length===0)l.innerHTML='<p style="text-align:center">НЕТ РЕЙСОВ</p>';ts.forEach(t=>{const r=document.createElement('div');r.className='tour-card';r.innerHTML=`<div><b>${t.destinations[0]}</b></div><span>${this.formatDate(t.date)}</span>`;r.onclick=()=>{App.goToTour(t.id);App.closeModal('modal-day-details');App.closeModal('modal-calendar')};l.appendChild(r)});document.getElementById('btn-create-on-date').onclick=()=>{App.prepareCreateTour(d);App.closeModal('modal-day-details');App.closeModal('modal-calendar')};document.getElementById('modal-day-details').classList.add('open')}, 
-    renderNotifications(){const l=document.getElementById('notify-list');l.innerHTML='';const lg=DB.load(DB.KEYS.LOGS)||[];lg.forEach(log=>{const d=document.createElement('div');d.className='notify-item';d.innerHTML=`<div class="notify-text">${log.text}</div><div class="notify-time">${log.time}</div>`;l.appendChild(d)})}, performSearch(){}
+    renderStaff(){ const container = document.getElementById('staff-list-container'); if(!container) return; container.innerHTML=''; const staff = DB.load(DB.KEYS.STAFF)||[]; const groups = {'driver': { title: '🚌 Водители', items: [] }, 'guide': { title: '🚩 Гиды', items: [] }, 'agent': { title: '💼 Агенты', items: [] }}; staff.forEach(s => { if(groups[s.role]) groups[s.role].items.push(s); }); Object.keys(groups).forEach(role => { if(groups[role].items.length > 0) { const header = document.createElement('div'); header.className = 'section-label'; header.innerText = groups[role].title; header.style.marginTop = '20px'; container.appendChild(header); const tableWrap = document.createElement('div'); tableWrap.className = 'table-wrapper'; const table = document.createElement('table'); table.className = 'data-table'; table.innerHTML = `<thead><tr><th>Имя</th><th>Тел</th><th>Баланс</th><th style="width:60px"></th></tr></thead>`; const tbody = document.createElement('tbody'); groups[role].items.forEach(s => { const tr = document.createElement('tr'); tr.className = `staff-${s.role}`; tr.innerHTML = `<td>${s.name}</td><td>${s.phone}</td><td>${s.balance} с</td><td style="display:flex; gap:5px; justify-content:flex-end;"><button class="btn-text" onclick="event.stopPropagation(); App.openEmployeeModal(${s.id})">✎</button><button class="btn-text" style="color:var(--danger)" onclick="event.stopPropagation(); App.deleteStaff(${s.id})">🗑️</button></td>`; tr.onclick = () => App.openEmployeeModal(s.id); tbody.appendChild(tr); }); table.appendChild(tbody); tableWrap.appendChild(table); container.appendChild(tableWrap); } }); },
+    renderQuickBookList() { const l = document.getElementById('quick-book-list'); if(!l) return; l.innerHTML = ''; const tours = DB.load(DB.KEYS.TOURS).sort((a,b)=>new Date(a.date)-new Date(b.date)).filter(t=>new Date(t.date)>=new Date()); if (tours.length === 0) { l.innerHTML = '<div style="text-align:center; padding:20px; color:#666">Нет актуальных туров</div>'; return; } tours.forEach(t => { const div = document.createElement('div'); div.className = 'tour-card'; div.innerHTML = `<div style="display:flex; justify-content:space-between; width:100%; align-items:center;"><div><b>${t.destinations[0]}</b><br><span style="font-size:11px; color:#888;">${t.date.slice(5,10)} ${t.date.slice(11,16)}</span></div><button class="btn-link" style="border:1px solid var(--text);" onclick="App.openBookingModal(null, {status:'free'}); window.currentTourId=${t.id};">ЗАПИСАТЬ</button></div>`; l.appendChild(div); }); },
+    renderTransactions(){ const tbody = document.getElementById('transactions-table-body'); if(!tbody) return; tbody.innerHTML = ''; const trans = DB.load(DB.KEYS.TRANS)||[]; const tours = DB.load(DB.KEYS.TOURS)||[]; let allItems = []; trans.forEach(t => { allItems.push({ date: t.date, type: 'expense', title: t.desc, category: t.category, amount: t.amount, desc: '' }); }); tours.forEach(t => { let income = 0; (t.seats||[]).forEach(s => { if(s && !s.isGift) { if(s.status==='taken') income+=(t.price||0); if(s.status==='partial') income+=(t.price||0)/2; } }); if(income > 0) allItems.push({ date: t.date, type: 'income', title: `Тур: ${t.destinations?t.destinations[0]:'Тур'}`, category: 'Продажа', amount: income, desc: '' }); const expenses = t.expenses || {driver:0,guide:0,other:0,vipList:[]}; const vipExp = (Array.isArray(expenses.vipList)?expenses.vipList:[]).reduce((s, v) => s + (v.cost||0), 0); const exp = (expenses.driver||0) + (expenses.guide||0) + (expenses.other||0) + vipExp; const expDesc = expenses.otherDesc ? `(Прочее: ${expenses.otherDesc})` : ''; if(exp > 0) allItems.push({ date: t.date, type: 'expense', title: `Тур: ${t.destinations?t.destinations[0]:'Тур'}`, category: 'Расход рейса', amount: exp, desc: expDesc }); }); const type = App.transFilterType; let filtered = allItems.filter(item => { if(type !== 'all' && item.type !== type) return false; return true; }); const mode = App.transSortMode; filtered.sort((a,b) => { if(mode === 'date-desc') return new Date(b.date) - new Date(a.date); if(mode === 'date-asc') return new Date(a.date) - new Date(b.date); if(mode === 'amount-desc') return b.amount - a.amount; if(mode === 'amount-asc') return a.amount - b.amount; return 0; }); filtered.forEach(item => { const row = document.createElement('tr'); const colorClass = item.type==='income'?'text-ok':'text-warn'; const sign = item.type==='income'?'+':'-'; row.innerHTML = `<td>${View.formatDate(item.date)}</td><td>${item.title} <small style="color:#888">${item.desc}</small></td><td class="${colorClass}" style="text-align:right">${sign}${item.amount}</td>`; tbody.appendChild(row); }); },
+    renderPnL(){ const incList = document.getElementById('pnl-income-list'); const tourExpList = document.getElementById('pnl-tour-expenses'); const opsExpList = document.getElementById('pnl-ops-expenses'); if(!incList) return; incList.innerHTML = ''; tourExpList.innerHTML = ''; opsExpList.innerHTML = ''; let totalInc = 0, totalTourExp = 0, totalOpsExp = 0; const tours = DB.load(DB.KEYS.TOURS)||[]; const trans = DB.load(DB.KEYS.TRANS)||[]; let methodStats = {mbank:0, cash:0, optima:0, obank:0}; tours.forEach(t => { if(!App.isDateInFilter(t.date)) return; const expenses = t.expenses || {driver:0,guide:0,other:0,vipList:[]}; (t.seats||[]).forEach(s => { if(s && s.isGift) return; let a = 0; if(s && s.status==='taken') a=(t.price||0); if(s && s.status==='partial') a=(t.price||0)/2; if(a>0) { totalInc += a; methodStats[s.method||'cash'] += a; } }); totalTourExp += ((expenses.driver||0) + (expenses.guide||0) + (expenses.other||0) + (Array.isArray(expenses.vipList)?expenses.vipList:[]).reduce((s,v)=>s+(v.cost||0),0)); }); for(let [k,v] of Object.entries(methodStats)) { if(v>0) incList.innerHTML += `<div class="ac-row"><span>${k.toUpperCase()}</span><strong class="text-ok">+${v}</strong></div>`; } tourExpList.innerHTML = `<div class="ac-row"><span>Себестоимость туров</span><strong class="text-warn">-${totalTourExp}</strong></div>`; trans.forEach(tr => { if(tr.type === 'expense' && App.isDateInFilter(tr.date)) { totalOpsExp += (tr.amount||0); opsExpList.innerHTML += `<div class="ac-row"><span>${tr.desc}</span><strong class="text-warn">-${tr.amount}</strong></div>`; } }); const net = totalInc - totalTourExp - totalOpsExp; document.getElementById('pnl-total-net').innerText = net + ' с'; document.getElementById('pnl-total-net').className = net>=0?'text-ok':'text-warn'; },
+    renderCashPage(){ const l=document.getElementById('debts-list');const safeEl=document.getElementById('safe-balance'); if(!l)return; l.innerHTML=''; const tours=DB.load(DB.KEYS.TOURS)||[];const trans=DB.load(DB.KEYS.TRANS)||[];const staff=DB.load(DB.KEYS.STAFF)||[]; let historicalNet = 0; tours.forEach(t => { let inc = 0; const expenses = t.expenses || {driver:0,guide:0,other:0,vipList:[]}; const vipExp = (Array.isArray(expenses.vipList)?expenses.vipList:[]).reduce((s,v)=>s+(v.cost||0),0); (t.seats||[]).forEach(s => {if(s && s.status!=='free'&&!s.isGift)inc+=(s.status==='taken'?(t.price||0):(t.price||0)/2)}); historicalNet += (inc - ((expenses.driver||0)+(expenses.guide||0)+(expenses.other||0)+vipExp)); }); const allOpsExp = trans.reduce((sum,tr)=>sum+(tr.type==='expense'?(tr.amount||0):0),0); const cashHands = staff.reduce((s,x)=>s+(x.balance||0),0); if(safeEl) safeEl.innerText = ((historicalNet - allOpsExp) - cashHands) + ' с'; staff.filter(s=>s.balance>0).forEach(s=>{ const r=document.createElement('div');r.className='ac-row'; r.onclick=()=>App.openDepositModal(s.id); r.style.cursor='pointer'; r.innerHTML=`<span>${s.name}</span><strong class="text-warn">${s.balance} с</strong>`; l.appendChild(r); }); },
+    renderLocations(){const l1=document.getElementById('locations-list-1day'); const l2=document.getElementById('locations-list-multi'); if(!l1 || !l2) return; l1.innerHTML=''; l2.innerHTML=''; (DB.load(DB.KEYS.DESTS)||[]).forEach(d=>{ const r=document.createElement('div');r.className='tour-card'; r.innerHTML=`<div class="tc-info"><h4>${d.name}</h4><span class="tc-meta">${d.desc||''}</span></div>`; r.onclick=()=>{App.openDestModal(d.id)}; if(d.type==='multi_day') l2.appendChild(r); else l1.appendChild(r); }); },
+    renderTours(){const list=document.getElementById('tours-list'); if(!list)return; list.innerHTML=''; const tours=DB.load(DB.KEYS.TOURS)||[]; const gr={}; tours.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(t=>{const n=(t.destinations && t.destinations[0]) ? t.destinations[0] : 'Без названия';if(!gr[n])gr[n]=[];gr[n].push(t)}); for(const[n,ts]of Object.entries(gr)){if(ts.length>1){const gd=document.createElement('div');gd.className='tour-card';gd.style.display='block';gd.innerHTML=`<div class="group-header" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none'" style="display:flex;justify-content:space-between;margin-bottom:10px;font-weight:700;"><span>${n}</span><span style="background:var(--bg);padding:2px 6px;border-radius:4px;font-size:11px;">${ts.length}</span></div>`;const c=document.createElement('div');c.style.display='none';ts.forEach(t=>{const tk=(t.seats||[]).filter(s=>s&&s.status!=='free').length;const r=document.createElement('div');r.style.padding='10px';r.style.borderTop='1px solid var(--border)';r.style.display='flex';r.style.justifyContent='space-between';r.innerHTML=`<span>${View.formatDate(t.date)} ${t.date.slice(11,16)}</span> <span>${tk}/${(t.seats||[]).length}</span>`;r.onclick=()=>App.goToTour(t.id);c.appendChild(r)});gd.appendChild(c);list.appendChild(gd)}else{const t=ts[0];const tk=(t.seats||[]).filter(s=>s&&s.status!=='free').length;const el=document.createElement('div');el.className='tour-card';el.innerHTML=`<div class="date-box"><span class="db-day">${t.date.slice(8,10)}</span><span class="db-mon">${t.date.slice(5,7)}</span></div><div class="tc-info"><h4>${t.destinations?t.destinations[0]:'Тур'}</h4><span class="tc-meta">${(t.seats||[]).length} мест • ${t.price}с</span></div><div class="tc-stat ${tk===(t.seats||[]).length?'full':''}">${tk}/${(t.seats||[]).length}</div>`;el.onclick=()=>App.goToTour(t.id);list.appendChild(el)}}},
+    renderTodayTomorrow(){const c=document.getElementById('widget-tt-content'); if(!c)return; c.innerHTML=''; const tours=DB.load(DB.KEYS.TOURS)||[]; const now=new Date(); const tmr=new Date(now); tmr.setDate(tmr.getDate()+1); const upc=tours.filter(t=>{const d=new Date(t.date);return d.toDateString()===now.toDateString()||d.toDateString()===tmr.toDateString()}).sort((a,b)=>new Date(a.date)-new Date(b.date)); if(upc.length===0){c.innerHTML='<div style="padding:10px;color:#888;text-align:center;font-size:12px;">Нет выездов на сегодня/завтра</div>';return}upc.forEach(t=>{const tk=(t.seats||[]).filter(s=>s&&s.status!=='free').length;const fr=(t.seats||[]).length-tk;const div=document.createElement('div');div.className='ac-row';div.innerHTML=`<div style="flex:1"><span style="font-weight:700;display:block;">${t.destinations?t.destinations[0]:'Тур'}</span><span style="font-size:11px;color:var(--text-sec);">${t.date.slice(11,16)}</span></div><span class="tc-stat ${fr<5?'warn':'ok'}">${fr} своб.</span>`;div.onclick=()=>App.goToTour(t.id);c.appendChild(div)})},
+    renderStaffOptions(){const d=document.getElementById('new-tour-driver'),g=document.getElementById('new-tour-guide');d.innerHTML='<option value="">Водитель</option>';g.innerHTML='<option value="">Гид</option>';(DB.load(DB.KEYS.STAFF)||[]).forEach(s=>{const o=document.createElement('option');o.value=s.id;o.innerText=s.name;if(s.role==='driver')d.appendChild(o);if(s.role==='guide')g.appendChild(o)})},
+    renderPointOptions(){const sel=document.getElementById('new-tour-point-select');if(!sel)return;sel.innerHTML='<option>Выбрать</option>';const points=DB.load(DB.KEYS.POINTS)||[];points.forEach(p=>{const o=document.createElement('option');o.value=p;o.innerText=p;sel.appendChild(o)});const oAdd=document.createElement('option');oAdd.innerText='+ Добавить...';oAdd.onclick=()=>App.toggleNewPointInput();sel.appendChild(oAdd);sel.onchange=(e)=>{if(e.target.value==='+ Добавить...'){App.toggleNewPointInput();e.target.value='Выбрать'}else{document.getElementById('new-point-custom-div').style.display='none'}}},
+    renderTimeOptions(){const s=document.getElementById('new-tour-time-picker');s.innerHTML='';for(let h=5;h<=23;h++){['00','30'].forEach(m=>{const v=`${h<10?'0'+h:h}:${m}`;const o=document.createElement('option');o.value=v;o.innerText=v;if(v==='07:00')o.selected=true;s.appendChild(o)})}},
+    renderCalendar(isPickerMode=false){const c=document.getElementById('calendar-widget-modal');c.innerHTML='';const m=this.calDate.getMonth(),y=this.calDate.getFullYear(),d=new Date(y,m+1,0).getDate(),off=new Date(y,m,1).getDay()-1;document.getElementById('cal-month-year-modal').innerText=`${m+1}.${y}`;for(let i=0;i<(off<0?6:off);i++)c.appendChild(document.createElement('div'));const tours=DB.load(DB.KEYS.TOURS)||[];for(let i=1;i<=d;i++){const div=document.createElement('div');const match=`${y}-${String(m+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`;div.className='cal-day';div.innerText=i;if(isPickerMode){div.onclick=()=>App.selectDateForTour(match);if(match===new Date().toISOString().slice(0,10))div.style.border='1px solid var(--text)'}else{if(tours.some(t=>t.date.startsWith(match)))div.classList.add('has-tour');div.onclick=()=>{View.openDayModal(match,tours.filter(t=>t.date.startsWith(match)))}}c.appendChild(div)}document.getElementById('day-tours-list').style.display=isPickerMode?'none':'block';document.getElementById('btn-create-on-date').style.display=isPickerMode?'none':'block'},
+    changeMonth(d){this.calDate.setMonth(this.calDate.getMonth()+d);this.renderCalendar(document.getElementById('modal-calendar').classList.contains('picker-mode'))},
+    openDayModal(d,ts){const l=document.getElementById('day-tours-list');l.innerHTML='';if(ts.length===0)l.innerHTML='<p style="text-align:center">НЕТ РЕЙСОВ</p>';ts.forEach(t=>{const r=document.createElement('div');r.className='tour-card';r.innerHTML=`<div><b>${t.destinations[0]}</b></div><span>${View.formatDate(t.date)}</span>`;r.onclick=()=>{App.goToTour(t.id);App.closeModal('modal-day-details');App.closeModal('modal-calendar')};l.appendChild(r)});document.getElementById('btn-create-on-date').onclick=()=>{App.prepareCreateTour(d);App.closeModal('modal-day-details');App.closeModal('modal-calendar')};document.getElementById('modal-day-details').classList.add('open')},
+    renderNotifications(){const l=document.getElementById('notify-list');l.innerHTML='';const lg=DB.load(DB.KEYS.LOGS)||[];lg.forEach(log=>{const d=document.createElement('div');d.className='notify-item';d.innerHTML=`<div class="notify-text">${log.text}</div><div class="notify-time">${log.time}</div>`;l.appendChild(d)})},showReportDetail(t){if(t==='guide')Router.go('screen-fin-cash');if(t==='net')Router.go('screen-fin-summary')}
 };
